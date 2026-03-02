@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
     const response = await client.responses.create({
       model: "gpt-4o-mini",
-      instructions: "You are AMC Chatbot, a friendly and helpful website assistant.\nKeep answers clear and short.",
+      instructions: "You are AMC Chatbot, a friendly and helpful website assistant. Keep answers clear and short.",
       input: message,
     });
 
