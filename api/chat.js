@@ -2,39 +2,52 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-function setCors(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 }
 
-export default async function handler(req, res) {
-  setCors(res);
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders() });
+}
 
-  if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Use POST request" });
-
+export async function POST(request) {
   try {
-    const { message } = req.body || {};
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "Message is required" });
+    if (!process.env.OPENAI_API_KEY) {
+      return Response.json(
+        { error: "Missing OPENAI_API_KEY on Vercel" },
+        { status: 500, headers: corsHeaders() }
+      );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "Missing OPENAI_API_KEY on Vercel" });
+    const body = await request.json().catch(() => ({}));
+    const message = body.message;
+
+    if (!message || typeof message !== "string") {
+      return Response.json(
+        { error: "Body must be { message: string }" },
+        { status: 400, headers: corsHeaders() }
+      );
     }
 
     const response = await client.responses.create({
       model: "gpt-4o-mini",
-      instructions: "You are AMC Chatbot, a friendly and helpful website assistant. Keep answers clear and short.",
+      instructions:
+        "You are AMC Chatbot, a friendly and helpful website assistant. Keep answers clear and short.",
       input: message,
     });
 
-    return res.status(200).json({ reply: response.output_text || "" });
+    return Response.json(
+      { reply: response.output_text || "" },
+      { status: 200, headers: corsHeaders() }
+    );
   } catch (error) {
-    return res.status(500).json({
-      error: "Something went wrong.",
-      message: error?.message || String(error),
-    });
+    return Response.json(
+      { error: "Something went wrong.", message: error?.message || String(error) },
+      { status: 500, headers: corsHeaders() }
+    );
   }
 }
